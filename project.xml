@@ -1,0 +1,12 @@
+<project name="kimcie_secure">
+    <folders>
+        <display name="ILI9341">
+            <folder path="screens"/>
+        </display>
+    </folders>
+    <targets>
+        <target name="esp32s3_ili9341">
+            <display width="320" height="240" color_depth="16" color_format="RGB565" />
+        </target>
+    </targets>
+</project>

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lvgl_project name="kimcie_secure" width="320" height="240" color_depth="16" color_format="RGB565" target="esp32s3_ili9341">
+    
+    <!-- Global Styles Configuration -->
+    <globals>
+        <styles>
+            <style name="style_screen" bg_color="0x111827" bg_opa="255" />
+            <style name="style_title" text_color="0xFFFFFF" />
+            <style name="style_muted" text_color="0x9CA3AF" />
+            <style name="style_success" text_color="0x00FF88" />
+            <style name="style_danger" text_color="0xFF3333" />
+        </styles>
+    </globals>
+
+    <!-- Project Screens -->
+    <screens>
+        
+        <!-- LOGIN SCREEN -->
+        <screen name="login_screen" active="true">
+            <styles>
+                <style name="screen_bg" bg_color="0x111827" bg_opa="255" />
+                <style name="keypad_bg" bg_color="0x1F2937" bg_opa="255" radius="16" pad_all="10" />
+                <style name="key_button" bg_color="0x374151" radius="10" />
+            </styles>
+            <view>
+                <lv_obj width="100%" height="100%">
+                    <style name="screen_bg"/>
+                    
+                    <!-- Left Column Panel -->
+                    <lv_obj name="left_panel" width="140" height="220" align="left_mid" x="10" y="0">
+                        <style bg_opa="0" border_width="0" pad_all="0"/>
+                        <lv_label text="KIMCIE SECURE" align="top_mid" y="15" />
+                        <lv_label text="ENTER PIN" align="top_mid" y="50">
+                            <style name="style_muted"/>
+                        </lv_label>
+                        <lv_label name="pin_label" text="" align="center" />
+                        <lv_label name="message_label" text="ENTER YOUR PIN" align="bottom_mid" y="-15">
+                            <style name="style_muted"/>
+                        </lv_label>
+                    </lv_obj>
+
+                    <!-- Right Column Panel (Keypad) -->
+                    <lv_obj name="keypad" width="150" height="200" align="right_mid" x="-10" y="0">
+                        <style name="keypad_bg"/>
+                        
+                        <!-- Buttons -->
+                        <lv_button name="key_1" width="40" height="40" x="7" y="8">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="1" />
+                            <lv_label text="1"/>
+                        </lv_button>
+                        <lv_button name="key_2" width="40" height="40" x="55" y="8">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="2" />
+                            <lv_label text="2"/>
+                        </lv_button>
+                        <lv_button name="key_3" width="40" height="40" x="103" y="8">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="3" />
+                            <lv_label text="3"/>
+                        </lv_button>
+                        <lv_button name="key_4" width="40" height="40" x="7" y="56">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="4" />
+                            <lv_label text="4"/>
+                        </lv_button>
+                        <lv_button name="key_5" width="40" height="40" x="55" y="56">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="5" />
+                            <lv_label text="5"/>
+                        </lv_button>
+                        <lv_button name="key_6" width="40" height="40" x="103" y="56">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="6" />
+                            <lv_label text="6"/>
+                        </lv_button>
+                        <lv_button name="key_7" width="40" height="40" x="7" y="104">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="7" />
+                            <lv_label text="7"/>
+                        </lv_button>
+                        <lv_button name="key_8" width="40" height="40" x="55" y="104">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="8" />
+                            <lv_label text="8"/>
+                        </lv_button>
+                        <lv_button name="key_9" width="40" height="40" x="103" y="104">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="9" />
+                            <lv_label text="9"/>
+                        </lv_button>
+                        <lv_button name="key_clear" width="40" height="40" x="7" y="152">
+                            <style name="key_button"/>
+                            <event_cb callback="clear_pin_event" trigger="clicked" />
+                            <lv_label text="C"/>
+                        </lv_button>
+                        <lv_button name="key_0" width="40" height="40" x="55" y="152">
+                            <style name="key_button"/>
+                            <event_cb callback="pin_key_event" trigger="clicked" user_data="0" />
+                            <lv_label text="0"/>
+                        </lv_button>
+                        <lv_button name="key_ok" width="40" height="40" x="103" y="152">
+                            <style name="key_button"/>
+                            <event_cb callback="submit_pin_event" trigger="clicked" />
+                            <lv_label text="OK"/>
+                        </lv_button>
+                    </lv_obj>
+                </lv_obj>
+            </view>
+        </screen>
+
+        <!-- ACCESS GRANTED SCREEN -->
+        <screen name="access_granted_screen">
+            <styles>
+                <style name="success_screen" bg_color="0x071A12" bg_opa="255" />
+                <style name="success_text" text_color="0x00FF88" />
+            </styles>
+            <view>
+                <lv_obj width="100%" height="100%">
+                    <style name="success_screen" />
+                    <lv_label text="ACCESS GRANTED&#10;&#10;DOOR UNLOCKED" align="center">
+                        <style name="success_text" />
+                    </lv_label>
+                </lv_obj>
+            </view>
+        </screen>
+
+        <!-- SYSTEM LOCKED SCREEN -->
+        <screen name="system_locked_screen">
+            <styles>
+                <style name="locked_screen" bg_color="0x200000" bg_opa="255" />
+                <style name="locked_text" text_color="0xFF3333" />
+            </styles>
+            <view>
+                <lv_obj width="100%" height="100%">
+                    <style name="locked_screen" />
+                    <lv_label text="SYSTEM LOCKED&#10;&#10;TOO MANY ATTEMPTS" align="center">
+                        <style name="locked_text" />
+                    </lv_label>
+                </lv_obj>
+            </view>
+        </screen>
+
+    </screens>
+</lvgl_project>
