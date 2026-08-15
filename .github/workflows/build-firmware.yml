@@ -63,6 +63,20 @@ jobs:
 
           python -m esptool "${MERGE_ARGS[@]}"
 
+          # Verify the flash-mode byte actually written into merged.bin's header.
+          # ESP32 image header: [0]=0xE9 magic, [1]=segment count,
+          # [2]=flash mode (0=QIO 1=QOUT 2=DIO 3=DOUT), [3]=flash size/freq.
+          echo "merged.bin header bytes:"
+          od -An -tx1 -N4 "$BUILD_DIR/merged.bin"
+          MODE_BYTE="$(od -An -tu1 -j2 -N1 "$BUILD_DIR/merged.bin" | tr -d ' ')"
+          case "$MODE_BYTE" in
+            0) echo "flash mode in image header: QIO" ;;
+            1) echo "flash mode in image header: QOUT" ;;
+            2) echo "flash mode in image header: DIO" ;;
+            3) echo "flash mode in image header: DOUT" ;;
+            *) echo "flash mode in image header: UNKNOWN ($MODE_BYTE)" ;;
+          esac
+
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
