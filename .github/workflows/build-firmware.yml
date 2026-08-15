@@ -1,0 +1,69 @@
+name: Build Firmware
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install -U platformio
+
+      - name: Build firmware
+        run: pio run -e esp32-s3-devkitc-1
+
+      - name: Merge into a single flashable binary
+        run: |
+          set -euo pipefail
+          BUILD_DIR=.pio/build/esp32-s3-devkitc-1
+
+          BOOTLOADER="$(find "$BUILD_DIR" -name bootloader.bin | head -n1)"
+          PARTITIONS="$(find "$BUILD_DIR" -name partitions.bin | head -n1)"
+          FIRMWARE="$(find "$BUILD_DIR" -name firmware.bin | head -n1)"
+          BOOT_APP0="$(find "$HOME/.platformio/packages" -name boot_app0.bin | head -n1)"
+
+          for f in "$BOOTLOADER" "$PARTITIONS" "$FIRMWARE"; do
+            if [ -z "$f" ]; then
+              echo "Required build output not found (bootloader/partitions/firmware .bin)" >&2
+              exit 1
+            fi
+          done
+
+          pip install -U esptool
+
+          MERGE_ARGS=(
+            --chip esp32s3 merge_bin
+            -o "$BUILD_DIR/merged.bin"
+            --flash_mode qio --flash_freq 80m --flash_size 8MB
+            0x0 "$BOOTLOADER"
+            0x8000 "$PARTITIONS"
+          )
+          if [ -n "$BOOT_APP0" ]; then
+            MERGE_ARGS+=(0xe000 "$BOOT_APP0")
+          fi
+          MERGE_ARGS+=(0x10000 "$FIRMWARE")
+
+          python -m esptool "${MERGE_ARGS[@]}"
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-access-control-firmware
+          path: |
+            .pio/build/esp32-s3-devkitc-1/firmware.bin
+            .pio/build/esp32-s3-devkitc-1/merged.bin
+          if-no-files-found: error
