@@ -43,14 +43,36 @@ void display_init(void)
 {
     Serial.println("[DISPLAY] Initializing ILI9341 via TFT_eSPI...");
 
+    // Step markers: this function has been faulting on hardware with a
+    // StoreProhibited exception, and the serial log is the only way to see
+    // which call is responsible. Each marker flushes before the next call.
+    Serial.println("[DISPLAY] step 1: tft.begin()");
+    Serial.flush();
     tft.begin();
+
+    Serial.println("[DISPLAY] step 2: setRotation()");
+    Serial.flush();
     tft.setRotation(1); // Landscape orientation (320x240)
+
+    Serial.println("[DISPLAY] step 3: fillScreen()");
+    Serial.flush();
     tft.fillScreen(TFT_BLACK);
 
     // Configure backlight PWM on TFT_BL pin using ledc (reliable on ESP32-S3)
+    Serial.printf("[DISPLAY] step 4: pinMode(BL=%d)\n", TFT_BL);
+    Serial.flush();
     pinMode(TFT_BL, OUTPUT);
+
+    Serial.println("[DISPLAY] step 5: ledcSetup()");
+    Serial.flush();
     ledcSetup(BL_LEDC_CHANNEL, BL_LEDC_FREQ, BL_LEDC_RES);
+
+    Serial.println("[DISPLAY] step 6: ledcAttachPin()");
+    Serial.flush();
     ledcAttachPin(TFT_BL, BL_LEDC_CHANNEL);
+
+    Serial.println("[DISPLAY] step 7: ledcWrite()");
+    Serial.flush();
     ledcWrite(BL_LEDC_CHANNEL, 192); // ~75% brightness
 
     Serial.println("[DISPLAY] ILI9341 initialized successfully.");
