@@ -14,10 +14,10 @@ extern "C"
  * These can be overridden via build_flags in platformio.ini.
  */
 #ifndef DOOR_RELAY
-#define DOOR_RELAY 5
+#define DOOR_RELAY 21
 #endif
 #ifndef BUZZER_PIN
-#define BUZZER_PIN 4
+#define BUZZER_PIN 18 // Onboard buzzer on the VIEWE display module
 #endif
 
 /**

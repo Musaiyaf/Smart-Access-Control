@@ -1,0 +1,88 @@
+name: Build Firmware
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install -U platformio
+
+      - name: Build firmware
+        run: pio run -e BOARD_VIEWE_UEDX24320028E_WB_A
+
+      - name: List available prebuilt bootloaders (diagnostic, only on failure)
+        if: failure()
+        run: ls -la "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/bin/" || true
+
+      - name: Merge into a single flashable binary
+        run: |
+          set -euo pipefail
+          BUILD_DIR=.pio/build/BOARD_VIEWE_UEDX24320028E_WB_A
+
+          BOOTLOADER="$(find "$BUILD_DIR" -name bootloader.bin | head -n1)"
+          PARTITIONS="$(find "$BUILD_DIR" -name partitions.bin | head -n1)"
+          FIRMWARE="$(find "$BUILD_DIR" -name firmware.bin | head -n1)"
+          BOOT_APP0="$(find "$HOME/.platformio/packages" -name boot_app0.bin | head -n1)"
+
+          for f in "$BOOTLOADER" "$PARTITIONS" "$FIRMWARE"; do
+            if [ -z "$f" ]; then
+              echo "Required build output not found (bootloader/partitions/firmware .bin)" >&2
+              exit 1
+            fi
+          done
+
+          pip install -q -U esptool
+
+          # VIEWE UEDX24320028E-WB-A: QIO flash + octal PSRAM (qio_opi), 16MB flash
+          MERGE_ARGS=(
+            --chip esp32s3 merge_bin
+            -o "$BUILD_DIR/merged.bin"
+            --flash_mode qio --flash_freq 80m --flash_size 16MB
+            0x0 "$BOOTLOADER"
+            0x8000 "$PARTITIONS"
+          )
+          if [ -n "$BOOT_APP0" ]; then
+            MERGE_ARGS+=(0xe000 "$BOOT_APP0")
+          fi
+          MERGE_ARGS+=(0x10000 "$FIRMWARE")
+
+          python -m esptool "${MERGE_ARGS[@]}"
+
+          # Verify the flash-mode byte actually written into merged.bin's header.
+          # ESP32 image header: [0]=0xE9 magic, [1]=segment count,
+          # [2]=flash mode (0=QIO 1=QOUT 2=DIO 3=DOUT), [3]=flash size/freq.
+          echo "merged.bin header bytes:"
+          od -An -tx1 -N4 "$BUILD_DIR/merged.bin"
+          MODE_BYTE="$(od -An -tu1 -j2 -N1 "$BUILD_DIR/merged.bin" | tr -d ' ')"
+          case "$MODE_BYTE" in
+            0) echo "flash mode in image header: QIO" ;;
+            1) echo "flash mode in image header: QOUT" ;;
+            2) echo "flash mode in image header: DIO" ;;
+            3) echo "flash mode in image header: DOUT" ;;
+            *) echo "flash mode in image header: UNKNOWN ($MODE_BYTE)" ;;
+          esac
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-access-control-firmware
+          path: |
+            .pio/build/BOARD_VIEWE_UEDX24320028E_WB_A/firmware.bin
+            .pio/build/BOARD_VIEWE_UEDX24320028E_WB_A/merged.bin
+          if-no-files-found: error
