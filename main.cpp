@@ -44,12 +44,18 @@ public:
     AccessControl()
         : failedAttempts(0), maxAttempts(config_get_max_attempts())
     {
-        // Load PIN from NVS
+        strcpy(correctPin, PIN_DEFAULT);
+    }
+
+    // Must be called after config_init() (NVS is not ready yet when this
+    // object's constructor runs — global objects are constructed before
+    // setup(), which is where config_init() happens).
+    void begin()
+    {
         if (!config_get_pin(correctPin, sizeof(correctPin)))
         {
             strcpy(correctPin, PIN_DEFAULT);
         }
-        // Load persisted failed attempts
         failedAttempts = config_get_failed_attempts();
         Serial.printf("[ACCESS] Loaded PIN from NVS. Failed attempts: %d/%d\n",
                       failedAttempts, maxAttempts);
@@ -352,6 +358,7 @@ void setup()
     {
         Serial.println("[FATAL] NVS initialization failed!");
     }
+    security.begin();
 
     // 2. Display (ILI9341 via TFT_eSPI)
     display_init();
