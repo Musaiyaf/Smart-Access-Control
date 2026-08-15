@@ -26,6 +26,10 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32-s3-devkitc-1
 
+      - name: List available prebuilt bootloaders (diagnostic, only on failure)
+        if: failure()
+        run: ls -la "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/bin/" || true
+
       - name: Merge into a single flashable binary
         run: |
           set -euo pipefail
@@ -48,7 +52,7 @@ jobs:
           MERGE_ARGS=(
             --chip esp32s3 merge_bin
             -o "$BUILD_DIR/merged.bin"
-            --flash_mode dio --flash_freq 40m --flash_size 8MB
+            --flash_mode dio --flash_freq 80m --flash_size 8MB
             0x0 "$BOOTLOADER"
             0x8000 "$PARTITIONS"
           )
