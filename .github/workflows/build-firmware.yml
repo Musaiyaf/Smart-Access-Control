@@ -26,6 +26,17 @@ jobs:
       - name: Build firmware
         run: pio run -e esp32-s3-devkitc-1
 
+      - name: Decode crash backtrace (diagnostic)
+        run: |
+          set -euo pipefail
+          ELF=".pio/build/esp32-s3-devkitc-1/firmware.elf"
+          ADDR2LINE="$(find "$HOME/.platformio/packages/toolchain-xtensa-esp32s3" -name 'xtensa-esp32s3-elf-addr2line' | head -n1)"
+          echo "Using addr2line: $ADDR2LINE"
+          echo "--- PC ---"
+          "$ADDR2LINE" -pfiaC -e "$ELF" 0x42001f93
+          echo "--- Backtrace ---"
+          "$ADDR2LINE" -pfiaC -e "$ELF" 0x42001f90 0x42002065 0x42002070
+
       - name: Merge into a single flashable binary
         run: |
           set -euo pipefail
