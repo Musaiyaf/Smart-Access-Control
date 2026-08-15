@@ -14,7 +14,7 @@ extern "C"
 
     /**
      * @brief Initialize the touch controller.
-     * - CST816S: I2C capacitive touch (SDA=GPIO6, SCL=GPIO7 by default)
+     * - CST816S: I2C capacitive touch (SDA=GPIO4, SCL=GPIO5 by default)
      * - XPT2046: SPI resistive touch
      */
     void touch_init(void);

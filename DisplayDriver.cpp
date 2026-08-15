@@ -15,10 +15,10 @@
 #define TFT_CS 10
 #endif
 #ifndef TFT_DC
-#define TFT_DC 9
+#define TFT_DC 6
 #endif
 #ifndef TFT_RST
-#define TFT_RST 8
+#define TFT_RST 7
 #endif
 #ifndef TFT_MOSI
 #define TFT_MOSI 11
@@ -30,7 +30,7 @@
 #define TFT_SCLK 12
 #endif
 #ifndef TFT_BL
-#define TFT_BL 38
+#define TFT_BL 1
 #endif
 
 // TFT_eSPI uses user_setup.h or build flags for pin configuration

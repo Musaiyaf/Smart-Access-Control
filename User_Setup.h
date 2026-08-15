@@ -5,14 +5,14 @@
 
 // SPI pins
 #define TFT_CS   10
-#define TFT_DC    9
-#define TFT_RST   8
+#define TFT_DC    6
+#define TFT_RST   7
 #define TFT_MOSI  11
 #define TFT_MISO  13
 #define TFT_SCLK  12
 
-// Backlight (GPIO38 on ESP32-S3-DevKitC-1)
-#define TFT_BL    38
+// Backlight (fixed on VIEWE ESP32-S3 2.8" module)
+#define TFT_BL    1
 
 // SPI frequency
 #define SPI_FREQUENCY  40000000

@@ -19,16 +19,16 @@
 #define CST816S_I2C_RETRY_DELAY_MS 5
 
 #ifndef CST816S_SDA
-#define CST816S_SDA 6
+#define CST816S_SDA 4
 #endif
 #ifndef CST816S_SCL
-#define CST816S_SCL 7
+#define CST816S_SCL 5
 #endif
 #ifndef CST816S_RST
-#define CST816S_RST -1 // Optional reset pin
+#define CST816S_RST 3 // Reset pin (fixed on VIEWE module)
 #endif
 #ifndef CST816S_INT
-#define CST816S_INT -1 // Optional interrupt pin
+#define CST816S_INT 0 // Interrupt pin (fixed on VIEWE module; polled, not wired as an ISR)
 #endif
 
 static uint16_t last_x = 0;
