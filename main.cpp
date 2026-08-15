@@ -1,15 +1,18 @@
 #include <Arduino.h>
 #include <cstring>
 #include <lvgl.h>
+#include <esp_display_panel.hpp>
 
-#include "DisplayDriver.h"
-#include "TouchDriver.h"
+#include "lvgl_v8_port.h"
 #include "ConfigManager.h"
 #include "HardwareController.h"
 
 #include "login_gen.h"
 #include "accessGranted_gen.h"
 #include "systemLocked_gen.h"
+
+using namespace esp_panel::drivers;
+using namespace esp_panel::board;
 
 // =====================================================
 // EXTERN "C" LINKAGE for C-generated LVGL screen files
@@ -130,39 +133,6 @@ static lv_obj_t *pinLabel = nullptr;
 static lv_obj_t *messageLabel = nullptr;
 
 // =====================================================
-// HELPER: Recursive child lookup by name
-// LVGL v9 removed lv_obj_find_by_name(), so we implement
-// our own recursive search through the object tree.
-// =====================================================
-
-static lv_obj_t *find_child_by_name(lv_obj_t *parent, const char *name)
-{
-    if (parent == nullptr || name == nullptr)
-    {
-        return nullptr;
-    }
-
-    const char *obj_name = lv_obj_get_name(parent);
-    if (obj_name != nullptr && strcmp(obj_name, name) == 0)
-    {
-        return parent;
-    }
-
-    uint32_t child_count = lv_obj_get_child_count(parent);
-    for (uint32_t i = 0; i < child_count; i++)
-    {
-        lv_obj_t *child = lv_obj_get_child(parent, i);
-        lv_obj_t *found = find_child_by_name(child, name);
-        if (found != nullptr)
-        {
-            return found;
-        }
-    }
-
-    return nullptr;
-}
-
-// =====================================================
 // UPDATE PIN DISPLAY
 // =====================================================
 
@@ -188,10 +158,8 @@ static void updatePinDisplay()
 
 void initialize_pin_ui()
 {
-    lv_obj_t *screen = lv_screen_active();
-
-    pinLabel = find_child_by_name(screen, "pin_label");
-    messageLabel = find_child_by_name(screen, "message_label");
+    pinLabel = login_gen_get_pin_label();
+    messageLabel = login_gen_get_message_label();
 
     updatePinDisplay();
 
@@ -290,7 +258,7 @@ extern "C" void submit_pin_event(lv_event_t *event)
         Serial.printf("[ACCESS] GRANTED! Door unlocked at %lu ms\n", millis());
 
         lv_obj_t *accessScreen = accessGranted_gen_create();
-        lv_screen_load_anim(accessScreen, LV_SCREEN_LOAD_ANIM_FADE_IN, 300, 0, true);
+        lv_scr_load_anim(accessScreen, LV_SCR_LOAD_ANIM_FADE_IN, 300, 0, true);
 
         currentState = STATE_GRANTED;
         stateTimer = millis();
@@ -306,7 +274,7 @@ extern "C" void submit_pin_event(lv_event_t *event)
         Serial.printf("[ACCESS] SYSTEM LOCKED! Too many failed attempts.\n");
 
         lv_obj_t *lockedScreen = systemLocked_gen_create();
-        lv_screen_load_anim(lockedScreen, LV_SCREEN_LOAD_ANIM_FADE_IN, 300, 0, true);
+        lv_scr_load_anim(lockedScreen, LV_SCR_LOAD_ANIM_FADE_IN, 300, 0, true);
 
         currentState = STATE_LOCKED;
         stateTimer = millis();
@@ -335,11 +303,6 @@ extern "C" void submit_pin_event(lv_event_t *event)
 // LVGL INTEGRATION & ARDUINO LIFE CYCLE
 // =====================================================
 
-static uint32_t my_tick_get_cb(void)
-{
-    return millis();
-}
-
 void setup()
 {
     Serial.begin(115200);
@@ -347,7 +310,8 @@ void setup()
     Serial.println();
     Serial.println("===========================================");
     Serial.println("  SMART ACCESS CONTROL v2.0");
-    Serial.println("  ESP32-S3 + ILI9341 + CST816S");
+    Serial.println("  ESP32-S3 + VIEWE UEDX24320028E-WB-A");
+    Serial.println("  (GC9307 display + CHSC6540 touch)");
     Serial.println("===========================================");
 
     // ---- Initialize hardware modules ----
@@ -360,43 +324,27 @@ void setup()
     }
     security.begin();
 
-    // 2. Display (ILI9341 via TFT_eSPI)
-    display_init();
+    // 2. Display + touch panel, via VIEWE's official board profile
+    Serial.println("[INIT] Initializing display panel board...");
+    Board *board = new Board();
+    board->init();
+    assert(board->begin());
 
-    // 3. LVGL library
-    lv_init();
-    lv_tick_set_cb(my_tick_get_cb);
+    // 3. LVGL library + display/touch drivers (handled by the port layer,
+    //    including the tick source and the background refresh task)
+    Serial.println("[INIT] Initializing LVGL...");
+    lvgl_port_init(board->getLCD(), board->getTouch());
 
-    // 4. Register LVGL display driver
-    lv_display_t *disp = lv_display_create(320, 240);
-    if (disp == nullptr)
-    {
-        Serial.println("[FATAL] lv_display_create() returned NULL!");
-        while (1)
-        {
-            delay(1000);
-        }
-    }
-    lv_display_set_flush_cb(disp, display_flush_cb);
-
-    // Single frame buffer for partial rendering (saves ~280KB DRAM on no-PSRAM board)
-    // 320px * 50 rows * 2 bytes per pixel (RGB565) = ~32KB draw buffer
-    static uint8_t buf1[320 * 50 * 2];
-    lv_display_set_buffers(disp, buf1, NULL, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
-
-    // 5. Touch (CST816S capacitive via I2C)
-    touch_init();
-    lv_indev_t *indev = lv_indev_create();
-    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
-    lv_indev_set_read_cb(indev, touch_read_cb);
-
-    // 6. Hardware peripherals (relay, buzzer)
+    // 4. Hardware peripherals (relay, buzzer)
     hw_init();
 
     // ---- Load and show login screen ----
+    Serial.println("[INIT] Creating UI...");
+    lvgl_port_lock(-1);
     lv_obj_t *loginScreen = login_gen_create();
-    lv_screen_load(loginScreen);
+    lv_scr_load(loginScreen);
     initialize_pin_ui();
+    lvgl_port_unlock();
 
     currentState = STATE_LOGIN;
 
@@ -408,19 +356,22 @@ void setup()
 
 void loop()
 {
-    // Handle LVGL timers
-    lv_timer_handler();
+    // LVGL timer handling and screen refresh run on a background task
+    // started by lvgl_port_init(); this loop only drives the access-control
+    // state machine, which must take the LVGL lock before touching any
+    // LVGL objects since it runs on a different task than that refresh loop.
 
-    // Screen transition state machine
     if (currentState == STATE_GRANTED && (millis() - stateTimer) > config_get_grant_duration_ms())
     {
         // Re-lock door and return to login screen after configured duration
         hw_door_lock();
         Serial.println("[STATE] Grant timeout — relocking door.");
 
+        lvgl_port_lock(-1);
         lv_obj_t *loginScreen = login_gen_create();
-        lv_screen_load_anim(loginScreen, LV_SCREEN_LOAD_ANIM_FADE_IN, 300, 0, true);
+        lv_scr_load_anim(loginScreen, LV_SCR_LOAD_ANIM_FADE_IN, 300, 0, true);
         initialize_pin_ui();
+        lvgl_port_unlock();
         currentState = STATE_LOGIN;
     }
     else if (currentState == STATE_LOCKED && (millis() - stateTimer) > config_get_lockout_duration_ms())
@@ -429,12 +380,13 @@ void loop()
         security.reset();
         Serial.println("[STATE] Lockout timeout — resetting and returning to login.");
 
+        lvgl_port_lock(-1);
         lv_obj_t *loginScreen = login_gen_create();
-        lv_screen_load_anim(loginScreen, LV_SCREEN_LOAD_ANIM_FADE_IN, 300, 0, true);
+        lv_scr_load_anim(loginScreen, LV_SCR_LOAD_ANIM_FADE_IN, 300, 0, true);
         initialize_pin_ui();
+        lvgl_port_unlock();
         currentState = STATE_LOGIN;
     }
 
-    delay(5);
+    delay(20);
 }
-

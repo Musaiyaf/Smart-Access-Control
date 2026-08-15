@@ -14,6 +14,16 @@ extern "C"
      */
     lv_obj_t *login_gen_create(void);
 
+    /**
+     * @brief Get the PIN dots label of the most recently created login screen.
+     */
+    lv_obj_t *login_gen_get_pin_label(void);
+
+    /**
+     * @brief Get the status message label of the most recently created login screen.
+     */
+    lv_obj_t *login_gen_get_message_label(void);
+
 #ifdef __cplusplus
 }
 #endif

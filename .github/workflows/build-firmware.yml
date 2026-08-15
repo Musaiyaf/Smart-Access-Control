@@ -24,7 +24,7 @@ jobs:
         run: pip install -U platformio
 
       - name: Build firmware
-        run: pio run -e esp32-s3-devkitc-1
+        run: pio run -e BOARD_VIEWE_UEDX24320028E_WB_A
 
       - name: List available prebuilt bootloaders (diagnostic, only on failure)
         if: failure()
@@ -33,7 +33,7 @@ jobs:
       - name: Merge into a single flashable binary
         run: |
           set -euo pipefail
-          BUILD_DIR=.pio/build/esp32-s3-devkitc-1
+          BUILD_DIR=.pio/build/BOARD_VIEWE_UEDX24320028E_WB_A
 
           BOOTLOADER="$(find "$BUILD_DIR" -name bootloader.bin | head -n1)"
           PARTITIONS="$(find "$BUILD_DIR" -name partitions.bin | head -n1)"
@@ -49,10 +49,11 @@ jobs:
 
           pip install -q -U esptool
 
+          # VIEWE UEDX24320028E-WB-A: QIO flash + octal PSRAM (qio_opi), 16MB flash
           MERGE_ARGS=(
             --chip esp32s3 merge_bin
             -o "$BUILD_DIR/merged.bin"
-            --flash_mode dio --flash_freq 80m --flash_size 8MB
+            --flash_mode qio --flash_freq 80m --flash_size 16MB
             0x0 "$BOOTLOADER"
             0x8000 "$PARTITIONS"
           )
@@ -82,6 +83,6 @@ jobs:
         with:
           name: smart-access-control-firmware
           path: |
-            .pio/build/esp32-s3-devkitc-1/firmware.bin
-            .pio/build/esp32-s3-devkitc-1/merged.bin
+            .pio/build/BOARD_VIEWE_UEDX24320028E_WB_A/firmware.bin
+            .pio/build/BOARD_VIEWE_UEDX24320028E_WB_A/merged.bin
           if-no-files-found: error
