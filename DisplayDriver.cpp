@@ -46,10 +46,6 @@ void display_init(void)
     tft.begin();
     tft.setRotation(1); // Landscape orientation (320x240)
     tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.setTextSize(1);
-    tft.setCursor(10, 100);
-    tft.print("Smart Access Control");
 
     // Configure backlight PWM on TFT_BL pin using ledc (reliable on ESP32-S3)
     pinMode(TFT_BL, OUTPUT);
