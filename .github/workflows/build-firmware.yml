@@ -30,17 +30,6 @@ jobs:
         if: failure()
         run: ls -la "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/bin/" || true
 
-      - name: Decode reported display_init crash backtrace (diagnostic)
-        run: |
-          set -euo pipefail
-          ELF=".pio/build/esp32-s3-devkitc-1/firmware.elf"
-          ADDR2LINE="$(find "$HOME/.platformio/packages/toolchain-xtensa-esp32s3" -name 'xtensa-esp32s3-elf-addr2line' | head -n1)"
-          echo "--- PC ---"
-          "$ADDR2LINE" -pfiaC -e "$ELF" 0x42001d17
-          echo "--- Backtrace ---"
-          "$ADDR2LINE" -pfiaC -e "$ELF" \
-            0x42001d14 0x42001de9 0x42001df4 0x42000d51 0x420016da 0x4203d2d2
-
       - name: Merge into a single flashable binary
         run: |
           set -euo pipefail
@@ -58,7 +47,7 @@ jobs:
             fi
           done
 
-          pip install -U esptool
+          pip install -q -U esptool
 
           MERGE_ARGS=(
             --chip esp32s3 merge_bin
@@ -96,3 +85,17 @@ jobs:
             .pio/build/esp32-s3-devkitc-1/firmware.bin
             .pio/build/esp32-s3-devkitc-1/merged.bin
           if-no-files-found: error
+
+      # Kept last so its output lands at the tail of the job log, where it is
+      # easy to read without scrolling past the toolchain/pip noise above.
+      - name: Decode reported display_init crash backtrace (diagnostic)
+        run: |
+          set -euo pipefail
+          ELF=".pio/build/esp32-s3-devkitc-1/firmware.elf"
+          ADDR2LINE="$(find "$HOME/.platformio/packages/toolchain-xtensa-esp32s3" -name 'xtensa-esp32s3-elf-addr2line' | head -n1)"
+          echo "=====> PC"
+          "$ADDR2LINE" -pfiaC -e "$ELF" 0x42001d17
+          echo "=====> BACKTRACE"
+          "$ADDR2LINE" -pfiaC -e "$ELF" \
+            0x42001d14 0x42001de9 0x42001df4 0x42000d51 0x420016da 0x4203d2d2
+          echo "=====> END"
